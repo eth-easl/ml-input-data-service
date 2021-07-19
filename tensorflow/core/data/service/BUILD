@@ -797,6 +797,7 @@ cc_library(
         ":cache_model",
         ":data_service",
         ":dispatcher_cache_state",
+        ":dispatcher_state",
         ":metadata_store",
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",

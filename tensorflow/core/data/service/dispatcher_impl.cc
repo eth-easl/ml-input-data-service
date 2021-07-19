@@ -702,6 +702,7 @@ Status DataServiceDispatcherImpl::CreateJob(
   int64 job_id = state_.NextAvailableJobId();
 
   // EASL - Caching decision: should the job compute, write or read from cache?
+  int64 worker_count;
   std::string job_type;
   std::shared_ptr<const Dataset> dataset;
   TF_RETURN_IF_ERROR(state_.DatasetFromId(dataset_id, dataset));
@@ -711,6 +712,10 @@ Status DataServiceDispatcherImpl::CreateJob(
   service::easl::cache_utils::DetermineJobType(
       config_, cache_state_, metadata_store_, dataset_fingerprint,
       compute_dataset_key, job_id, job_type);
+
+  service::easl::cache_utils::DetermineElasticity(job_type, state_, config_,
+      cache_state_, metadata_store_, dataset_fingerprint, dataset_fingerprint,
+      compute_dataset_key, worker_count);
 
   VLOG(0) << "EASL - Caching decision for dataset_key " <<
   compute_dataset_key << ": " << job_type;

@@ -8,6 +8,7 @@
 #include "tensorflow/core/data/service/easl/metadata_store.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/data/service/common.pb.h"
+#include "tensorflow/core/data/service/dispatcher_state.h"
 #include "tensorflow/core/protobuf/service_config.pb.h"
 
 
@@ -48,6 +49,17 @@ Status DetermineJobType(
     const std::string& dataset_key,
     const int64 job_id,
     std::string& job_type);
+
+Status DetermineElasticity(
+    const std::string& job_type,
+    const DispatcherState& dispatcher_state,
+    const experimental::DispatcherConfig& dispatcher_config,
+    ::tensorflow::data::CacheState& cache_state,
+    const ::tensorflow::data::easl::MetadataStore& metadata_store,
+    const uint64 fingerprint,
+    const std::string& dataset_key,
+    const int64 job_id,
+    int64& worker_count);
 
 Status AddPutOperator(const DatasetDef& dataset,
                       const uint64 fingerprint,

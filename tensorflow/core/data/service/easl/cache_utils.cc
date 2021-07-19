@@ -162,11 +162,12 @@ Status DetermineJobType(const experimental::DispatcherConfig& dispatcher_config,
   for(std::pair<std::string, std::shared_ptr<NodeMetrics::Metrics>> e : node_metrics->metrics_){
     std::shared_ptr<NodeMetrics::Metrics> worker_metrics = e.second;
     // TODO average out row size here for datasets with varying row size?
-    row_size = worker_metrics->bytes_produced() / worker_metrics->num_elements();
+    row_size += worker_metrics->bytes_produced() / worker_metrics->num_elements();
     compute_time_per_row_ms += worker_metrics->in_prefix_time_ms();
   }
 
   compute_time_per_row_ms = compute_time_per_row_ms / num_workers;
+  row_size = row_size / num_workers;
 
   VLOG(0) << "row size " << row_size;
   VLOG(0) << "compute time " << compute_time_per_row_ms;
@@ -186,6 +187,74 @@ Status DetermineJobType(const experimental::DispatcherConfig& dispatcher_config,
     job_type = "COMPUTE";
   }
 
+  return Status::OK();
+}
+
+Status DetermineElasticity(
+  const std::string& job_type,
+  const DispatcherState& dispatcher_state,
+  const experimental::DispatcherConfig& dispatcher_config,
+  ::tensorflow::data::CacheState& cache_state,
+  const ::tensorflow::data::easl::MetadataStore& metadata_store,
+  const uint64 fingerprint,
+  const std::string& dataset_key,
+  const int64 job_id,
+  int64& worker_count) {
+  using NodeMetrics = ::tensorflow::data::easl::NodeMetrics;
+  using ModelMetrics = ::tensorflow::data::easl::ModelMetrics;
+
+  // Pipeline stats
+  std::shared_ptr<NodeMetrics> last_tf_node_metrics;
+  size_t num_workers = (last_tf_node_metrics->metrics_).size();
+  TF_RETURN_IF_ERROR(
+    metadata_store.GetLastTFNodeMetricsByDatasetKey(
+      dataset_key, last_tf_node_metrics));
+
+  // Model stats
+  double client_throughput = 0.0;
+  std::shared_ptr<ModelMetrics> model_metrics;
+  TF_RETURN_IF_ERROR(
+    metadata_store.GetModelMetricsByDatasetKey(
+      dataset_key, model_metrics));
+
+  // Get the client throughput 
+  for(std::pair<int64, std::shared_ptr<ModelMetrics::Metrics>> e : 
+    model_metrics->metrics_) {
+    std::shared_ptr<ModelMetrics::Metrics> client_metrics = e.second;
+    client_throughput += 1.0 / client_metrics->inter_arrival_time_ms();
+  }
+
+  if (job_type == "COMPUTE" || job_type == "PUT") {
+    double avg_worker_throughput = 0.0;
+    DCHECK(num_workers > 0);
+
+    // Get the average throughput for a worker
+    for(std::pair<std::string, std::shared_ptr<NodeMetrics::Metrics>> e : 
+      last_tf_node_metrics->metrics_) {
+      std::shared_ptr<NodeMetrics::Metrics> worker_metrics = e.second;
+      avg_worker_throughput += 1.0 / worker_metrics->in_prefix_time_ms();
+    }
+    avg_worker_throughput /= num_workers;
+
+    // Infer the number of workers required to sustain the model
+    worker_count = ceil(client_throughput / avg_worker_throughput);
+  } else {
+    // Get the time per row from the model
+    uint64 row_size = 0;
+
+    for(std::pair<std::string, std::shared_ptr<NodeMetrics::Metrics>> e : 
+      last_tf_node_metrics->metrics_) {
+      std::shared_ptr<NodeMetrics::Metrics> worker_metrics = e.second;
+      row_size += worker_metrics->bytes_produced() / worker_metrics->num_elements();
+    }
+
+    row_size /= num_workers;
+    double cache_read_time_per_row_ms = data::cache_model::GetTimePerRow(row_size);
+
+    // This must be GET from cache
+    worker_count = ceil(client_throughput / (1.0 / cache_read_time_per_row_ms));
+  }
+  
   return Status::OK();
 }
 
