@@ -47,10 +47,10 @@ namespace {
 constexpr const char kBytesConsumed[] = "bytes_consumed";
 constexpr const char kBytesProduced[] = "bytes_produced";
 constexpr const char kNumElements[] = "num_elements";
-constexpr const char kComputationTime[] = "computation_time";
+// constexpr const char kComputationTime[] = "computation_time";
 constexpr const char kInNodeTime[] = "in_node_time";
-
 constexpr const char kInPrefixTime[] = "in_prefix_time";
+
 } // namespace
 
 
@@ -72,6 +72,8 @@ Status DataServiceDispatcherClient::WorkerHeartbeat(
     task->set_id(task_metrics.first);
     task->set_last_node_name(
         task_metrics.second->begin()->second.last_node_name());
+    task->set_last_tf_node_name(
+        task_metrics.second->begin()->second.last_tf_node_name());
 
     for (auto& node_metrics : *task_metrics.second) {
       WorkerHeartbeatRequest::Task::Node* node = task->add_nodes();
@@ -82,7 +84,7 @@ Status DataServiceDispatcherClient::WorkerHeartbeat(
       (*metrics)[kBytesConsumed] = node_metrics.second.bytes_consumed();
       (*metrics)[kBytesProduced] = node_metrics.second.bytes_produced();
       (*metrics)[kNumElements] = node_metrics.second.num_elements();
-      (*metrics)[kComputationTime] = node_metrics.second.computation_time();
+      // (*metrics)[kComputationTime] = node_metrics.second.computation_time();
       (*metrics)[kInNodeTime] = node_metrics.second.in_node_time();
       (*metrics)[kInPrefixTime] = node_metrics.second.in_prefix_time();
     }

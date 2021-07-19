@@ -69,7 +69,8 @@ class NodeMetrics {
       public:
         explicit Metrics(Metrics& other);
         explicit Metrics(int64 bytes_consumed, int64 bytes_produced, 
-                          int64 num_elements, int64 computation_time, 
+                          int64 num_elements, 
+                          // int64 computation_time, 
                           double in_node_time_ms, double in_prefix_time_ms);
         
         void Update(Metrics& other);
@@ -77,14 +78,14 @@ class NodeMetrics {
         void set_bytes_consumed(int64 x)   { bytes_consumed_ = x; }
         void set_bytes_produced(int64 x)   { bytes_produced_ = x; }
         void set_num_elements(int64 x)     { num_elements_ = x; }
-        void set_computation_time(int64 x) { computation_time_ = x; }
+        // void set_computation_time(int64 x) { computation_time_ = x; }
         void set_in_node_time_ms(double x)    { in_node_time_ms_ = x; }
         void set_in_prefix_time_ms(double x)  { in_prefix_time_ms_ = x; }
 
         int64 bytes_consumed()   { return bytes_consumed_; }
         int64 bytes_produced()   { return bytes_produced_; }
         int64 num_elements()     { return num_elements_; }
-        int64 computation_time() { return computation_time_; }
+        // int64 computation_time() { return computation_time_; }
         double in_node_time_ms()     { return in_node_time_ms_; }
         double in_prefix_time_ms()   { return in_prefix_time_ms_; }
 
@@ -92,7 +93,7 @@ class NodeMetrics {
         int64 bytes_consumed_;
         int64 bytes_produced_;
         int64 num_elements_;
-        int64 computation_time_;
+        // int64 computation_time_;
         double in_node_time_ms_;
         double in_prefix_time_ms_; 
     };
@@ -121,14 +122,18 @@ class InputPipelineMetrics {
       absl::flat_hash_map<string, std::shared_ptr<NodeMetrics>>;
 
     InputPipelineMetrics() 
-      : last_node_name_("") {}
-    InputPipelineMetrics(std::string last_node_name) 
-      : last_node_name_(last_node_name) {}
+      : last_node_name_(""),
+        last_tf_node_name_("") {}
+    InputPipelineMetrics(std::string last_node_name, 
+      std::string last_tf_node_name) 
+      : last_node_name_(last_node_name), 
+        last_tf_node_name_(last_tf_node_name) {}
 
     // Get the metrics for a single node
     Status GetNodeMetrics(string long_name, 
       std::shared_ptr<NodeMetrics>& metrics);
     Status GetLastNodeMetrics(std::shared_ptr<NodeMetrics>& metrics);
+    Status GetLastTFNodeMetrics(std::shared_ptr<NodeMetrics>& metrics);
 
     // Get the metrics from the same worker for each node in the graph 
     Status GetWorkerMetrics(string worker_address, 
@@ -141,11 +146,14 @@ class InputPipelineMetrics {
     // Methods for managing the last node name
     std::string GetLastNodeName();
     void SetLastNodeName(std::string last_node_name);
+    std::string GetLastTFNodeName();
+    void SetLastTFNodeName(std::string last_tf_node_name);
 
     void DumpToStream(std::stringstream& ss);
 
     // Last user node name
     std::string last_node_name_;
+    std::string last_tf_node_name_;
     // The keys are the long name of the node
     MetricsCollection metrics_;
 };
@@ -203,8 +211,12 @@ class MetadataStore {
   
   Status GetLastNodeMetrics(int64 job_id, 
     std::shared_ptr<NodeMetrics>& metrics) const;
+  Status GetLastTFNodeMetrics(int64 job_id, 
+    std::shared_ptr<NodeMetrics>& metrics) const;
 
   Status GetLastNodeMetricsByDatasetKey(const std::string& dataset_key,
+    std::shared_ptr<NodeMetrics>& metrics) const;
+  Status GetLastTFNodeMetricsByDatasetKey(const std::string& dataset_key,
     std::shared_ptr<NodeMetrics>& metrics) const;
 
   // Update or create the metrics for a client
@@ -215,7 +227,8 @@ class MetadataStore {
   Status UpdateInputPipelineMetrics(int64 job_id, string node_long_name, 
     string worker_address, NodeMetrics::Metrics& metrics);
   
-  Status UpdateLastNode(int64 job_id, string node_long_name);
+  Status UpdateLastNodes(int64 job_id, string last_node_name, 
+    string last_tf_node_name);
 
   // Update or create the metrics for the dataset key from the given job.
   Status UpdateDatasetKeyJobMetrics(int64 job_id, const std::string& dataset_key);

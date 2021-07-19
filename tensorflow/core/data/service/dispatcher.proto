@@ -23,6 +23,7 @@ message WorkerHeartbeatRequest {
     
     int64 id = 1;
     string last_node_name = 2;
+    string last_tf_node_name = 4;
     repeated Node nodes = 3;
   }
 

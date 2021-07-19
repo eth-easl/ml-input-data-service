@@ -70,17 +70,18 @@ NodeMetrics::Metrics::Metrics(NodeMetrics::Metrics& other)
   : bytes_consumed_(other.bytes_consumed()),
     bytes_produced_(other.bytes_produced()),
     num_elements_(other.num_elements()),
-    computation_time_(other.computation_time()),
+    // computation_time_(other.computation_time()),
     in_node_time_ms_(other.in_node_time_ms()),
     in_prefix_time_ms_(other.in_prefix_time_ms()) {}
 
 NodeMetrics::Metrics::Metrics(int64 bytes_consumed, int64 bytes_produced, 
-  int64 num_elements, int64 computation_time, double in_node_time_ms, 
-  double in_prefix_time_ms) 
+  int64 num_elements, 
+  // int64 computation_time, 
+  double in_node_time_ms, double in_prefix_time_ms) 
   : bytes_consumed_(bytes_consumed),
     bytes_produced_(bytes_produced),
     num_elements_(num_elements),
-    computation_time_(computation_time),
+    // computation_time_(computation_time),
     in_node_time_ms_(in_node_time_ms),
     in_prefix_time_ms_(in_prefix_time_ms) {}
 
@@ -88,7 +89,7 @@ void NodeMetrics::Metrics::Update(NodeMetrics::Metrics& other) {
   bytes_consumed_ = other.bytes_consumed_;
   bytes_produced_ = other.bytes_produced_;
   num_elements_ = other.num_elements_;
-  computation_time_ = other.computation_time_;
+  // computation_time_ = other.computation_time_;
   in_node_time_ms_ = other.in_node_time_ms_;
   in_prefix_time_ms_ = other.in_prefix_time_ms_; 
 }
@@ -127,7 +128,7 @@ void NodeMetrics::DumpToStream(std::stringstream &ss) {
     ss << "{ \"bytes_consumed\" : " << std::to_string(pair.second->bytes_consumed()) << " , ";
     ss << "\"bytes_produced\" : " << std::to_string(pair.second->bytes_produced()) << " , ";
     ss << "\"num_elements\" : " << std::to_string(pair.second->num_elements()) << " , ";
-    ss << "\"computation_time\" : " << std::to_string(pair.second->computation_time()) << " , ";
+    // ss << "\"computation_time\" : " << std::to_string(pair.second->computation_time()) << " , ";
     ss << "\"in_node_time_ms\" : " << std::to_string(pair.second->in_node_time_ms()) << " , ";
     ss << "\"in_prefix_time_ms\" : " << std::to_string(pair.second->in_prefix_time_ms()) << " }";
     ss << std::endl;
@@ -152,6 +153,15 @@ Status InputPipelineMetrics::GetLastNodeMetrics(
     return errors::NotFound("Last node was not given a name");
   }
   GetNodeMetrics(last_node_name_, metrics);
+  return Status::OK();
+}
+
+Status InputPipelineMetrics::GetLastTFNodeMetrics(
+  std::shared_ptr<NodeMetrics>& metrics) {
+  if (last_tf_node_name_ == "") {
+    return errors::NotFound("Last TF node was not given a name");
+  }
+  GetNodeMetrics(last_tf_node_name_, metrics);
   return Status::OK();
 }
 
@@ -189,6 +199,10 @@ void InputPipelineMetrics::SetLastNodeName(std::string last_node_name) {
   last_node_name_ = last_node_name;
 }
 
+std::string InputPipelineMetrics::GetLastTFNodeName() { return last_tf_node_name_; }
+void InputPipelineMetrics::SetLastTFNodeName(std::string last_tf_node_name) {
+  last_tf_node_name_ = last_tf_node_name;
+}
 
 void InputPipelineMetrics::DumpToStream(std::stringstream& ss){
   ss << "{ " << std::endl;
@@ -315,12 +329,32 @@ Status MetadataStore::GetLastNodeMetrics(int64 job_id,
   return s;
 }
 
+Status MetadataStore::GetLastTFNodeMetrics(int64 job_id, 
+  std::shared_ptr<NodeMetrics>& metrics) const {
+  std::shared_ptr<JobMetrics> job_metrics;
+  Status s = GetJobMetrics(job_id, job_metrics);
+  if (s.ok()) {
+    return job_metrics->input_pipeline_metrics_->GetLastTFNodeMetrics(metrics);
+  }
+  return s;
+}
+
 Status MetadataStore::GetLastNodeMetricsByDatasetKey(
   const std::string& dataset_key, std::shared_ptr<NodeMetrics>& metrics) const {
   std::shared_ptr<JobMetrics> job_metrics;
   Status s = GetJobMetricsByDatasetKey(dataset_key, job_metrics);
   if (s.ok()) {
     return job_metrics->input_pipeline_metrics_->GetLastNodeMetrics(metrics);
+  }
+  return s;
+}
+
+Status MetadataStore::GetLastTFNodeMetricsByDatasetKey(
+  const std::string& dataset_key, std::shared_ptr<NodeMetrics>& metrics) const {
+  std::shared_ptr<JobMetrics> job_metrics;
+  Status s = GetJobMetricsByDatasetKey(dataset_key, job_metrics);
+  if (s.ok()) {
+    return job_metrics->input_pipeline_metrics_->GetLastTFNodeMetrics(metrics);
   }
   return s;
 }
@@ -390,11 +424,13 @@ Status MetadataStore::UpdateDatasetKeyJobMetrics(int64 job_id,
   return Status::OK();
 }
 
-Status MetadataStore::UpdateLastNode(int64 job_id, string node_name) {
+Status MetadataStore::UpdateLastNodes(int64 job_id, string last_node_name, 
+  string last_tf_node_name) {
   std::shared_ptr<InputPipelineMetrics> pipeline_metrics;
   Status s = GetInputPipelineMetrics(job_id, pipeline_metrics);
   if (s.ok()) {
-    pipeline_metrics->SetLastNodeName(node_name);
+    pipeline_metrics->SetLastNodeName(last_node_name);
+    pipeline_metrics->SetLastTFNodeName(last_tf_node_name);
   } 
   // if s != ok --> no such job exists
   return s;

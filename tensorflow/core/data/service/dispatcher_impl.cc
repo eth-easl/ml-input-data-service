@@ -81,7 +81,7 @@ constexpr std::array<const char*, 8> kNodeNameSharingOps = {
 constexpr const char kBytesConsumed[] = "bytes_consumed";
 constexpr const char kBytesProduced[] = "bytes_produced";
 constexpr const char kNumElements[] = "num_elements";
-constexpr const char kComputationTime[] = "computation_time";
+// constexpr const char kComputationTime[] = "computation_time";
 constexpr const char kInNodeTime[] = "in_node_time";
 constexpr const char kInPrefixTime[] = "in_prefix_time";
 
@@ -327,22 +327,24 @@ Status DataServiceDispatcherImpl::WorkerHeartbeat(
     if (s.ok()) {
       auto job_id = task_object->job->job_id;
       std::string last_node_name = task.last_node_name();
-      s = metadata_store_.UpdateLastNode(job_id, last_node_name);
+      std::string last_tf_node_name = task.last_tf_node_name();
+      s = metadata_store_.UpdateLastNodes(job_id, last_node_name, 
+        last_tf_node_name);
       if(!s.ok()){
         // Ignore metrics if job has already been removed from metadata store.
         // Otherwise return status error.
         if(!errors::IsNotFound(s)){ return s; }
       } else {
         for (int j = 0; j < task.nodes_size(); ++j) {
-        auto metrics = task.mutable_nodes(j)->mutable_metrics();
-        easl::NodeMetrics::Metrics node_metrics((*metrics)[kBytesConsumed], 
-          (*metrics)[kBytesProduced], (*metrics)[kNumElements], 
-          (*metrics)[kComputationTime], (*metrics)[kInNodeTime], 
-          (*metrics)[kInPrefixTime]);
+          auto metrics = task.mutable_nodes(j)->mutable_metrics();
+          easl::NodeMetrics::Metrics node_metrics((*metrics)[kBytesConsumed], 
+            (*metrics)[kBytesProduced], (*metrics)[kNumElements], 
+            // (*metrics)[kComputationTime], 
+            (*metrics)[kInNodeTime], (*metrics)[kInPrefixTime]);
 
-        TF_RETURN_IF_ERROR(metadata_store_.UpdateInputPipelineMetrics(job_id, 
-          task.mutable_nodes(j)->name(), request->worker_address(), 
-          node_metrics));
+          TF_RETURN_IF_ERROR(metadata_store_.UpdateInputPipelineMetrics(job_id, 
+            task.mutable_nodes(j)->name(), request->worker_address(), 
+            node_metrics));
         }
       } 
     }

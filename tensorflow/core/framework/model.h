@@ -617,6 +617,7 @@ class Node {
     double in_node_time_;
     double in_prefix_time_;
     std::string last_node_name_; 
+    std::string last_tf_node_name_;
     
     public:
       explicit MetricDump(const Node::Metrics& metrics)
@@ -626,7 +627,8 @@ class Node {
             computation_time_(metrics.recorded_computation_time_),
             in_node_time_(0.0),
             in_prefix_time_(0.0),
-            last_node_name_("") {}
+            last_node_name_(""),
+            last_tf_node_name_("") {}
 
       const int64 bytes_consumed() const { return bytes_consumed_; }
       const int64 bytes_produced() const { return bytes_produced_; }
@@ -642,6 +644,8 @@ class Node {
       // Methods for getting and setting the last node name
       void set_last_node_name(std::string x) { last_node_name_ = x; }
       std::string last_node_name() { return last_node_name_; }
+      void set_last_tf_node_name(std::string x) { last_tf_node_name_ = x; }
+      std::string last_tf_node_name() { return last_tf_node_name_; }
 
       // Method which logs the metrics of this object
       void log_metrics() const {
@@ -650,7 +654,9 @@ class Node {
                 << " > num_elements = " << num_elements_ << "\n"
                 << " > computation_time = " << computation_time_ << "\n"
                 << " > in_node_time = " << in_node_time_ << "\n"
-                << " > in_prefix_time = " << in_prefix_time_;
+                << " > in_prefix_time = " << in_prefix_time_ << "\n"
+                << " > last_node_name = " << last_node_name_ << "\n"
+                << " > last_tf_node_name = " << last_tf_node_name_;
       }
   };
 

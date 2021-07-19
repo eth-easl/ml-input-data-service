@@ -111,7 +111,7 @@ Status DetermineJobType(const experimental::DispatcherConfig& dispatcher_config,
                      const uint64 fingerprint,
                      const std::string& dataset_key,
                      const int64 job_id,
-                     std::string& job_type){
+                     std::string& job_type) {
   // First check if we should use a "fixed" cache policy:
   // 2==compute, 3==cache(put, then get from 2nd epoch)
   // ---------------------------------------------------------------------------
@@ -188,6 +188,21 @@ Status DetermineJobType(const experimental::DispatcherConfig& dispatcher_config,
 
   return Status::OK();
 }
+
+// Status DetermineElasticity(
+//   const int64 job_id,
+//   const DispatcherState& dispatcher_state,
+//   const std::string& job_type,
+//   const experimental::DispatcherConfig& dispatcher_config,
+//   const ::tensorflow::data::easl::MetadataStore& metadata_store,
+//   const uint64 fingerprint,
+//   const std::string& dataset_key
+//   ) {
+  
+//   // ReserveWorkers()
+//   // [TODO]: Finish implementation
+//   return Status::OK();
+// }
 
 Status AddPutOperator(const DatasetDef& dataset,
                       const uint64 fingerprint,
