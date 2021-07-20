@@ -235,8 +235,12 @@ Status DetermineElasticity(
     std::shared_ptr<ModelMetrics::Metrics> client_metrics = e.second;
     client_throughput += 1.0 / client_metrics->inter_arrival_time_ms();
   }
+  VLOG(0) << "(DetermineElasticity) Total client throughput demand " 
+          << client_throughput;
 
   if (job_type == "COMPUTE" || job_type == "PUT") {
+    VLOG(0) << "(DetermineElasticity) In COMPUTE or PUT branch with case " 
+            << job_type;
     double avg_worker_throughput = 0.0;
 
     // Get the average throughput for a worker
@@ -246,10 +250,14 @@ Status DetermineElasticity(
       avg_worker_throughput += 1.0 / worker_metrics->in_prefix_time_ms();
     }
     avg_worker_throughput /= num_workers;
+    VLOG(0) << "(DetermineElasticity) Average worker throughput "
+            << avg_worker_throughput;
 
     // Infer the number of workers required to sustain the model
     worker_count = ceil(client_throughput / avg_worker_throughput);
   } else {
+    VLOG(0) << "(DetermineElasticity) In GET branch."; 
+
     // Get last user node metrics
     std::shared_ptr<NodeMetrics> last_node_metrics;
     TF_RETURN_IF_ERROR(
@@ -277,11 +285,18 @@ Status DetermineElasticity(
     tf_nodes_overhead_ms /= num_workers;
     double cache_read_time_per_row_ms = data::cache_model::GetTimePerRow(
       row_size);
+    
+    VLOG(0) << "(DetermineElasticity) Average row size " << row_size;
+    VLOG(0) << "(DetermineElasticity) Average read time per item " 
+            << cache_read_time_per_row_ms;
+    VLOG(0) << "(DetermineElasticity) Average TF overhead " 
+            << tf_nodes_overhead_ms;
 
     // Infer the worker count for the cache GET use case
     worker_count = ceil(client_throughput * (cache_read_time_per_row_ms 
       + tf_nodes_overhead_ms));
   }
+  VLOG(0) << "(DetermineElasticity) Inferred workers " << worker_count;
   
   return Status::OK();
 }
