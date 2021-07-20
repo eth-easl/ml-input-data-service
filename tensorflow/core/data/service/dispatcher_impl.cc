@@ -42,6 +42,7 @@ limitations under the License.
 #include "tensorflow/core/data/service/journal.h"
 #include "tensorflow/core/data/service/worker.grpc.pb.h"
 #include "tensorflow/core/data/service/easl/cache_utils.h"
+#include "tensorflow/core/data/service/easl/metadata_store.h"
 #include "tensorflow/core/data/standalone.h"
 #include "tensorflow/core/framework/dataset.h"
 #include "tensorflow/core/framework/graph.pb.h"
@@ -713,9 +714,8 @@ Status DataServiceDispatcherImpl::CreateJob(
       config_, cache_state_, metadata_store_, dataset_fingerprint,
       compute_dataset_key, job_id, job_type);
 
-  service::easl::cache_utils::DetermineElasticity(job_type, state_, config_,
-      cache_state_, metadata_store_, dataset_fingerprint, dataset_fingerprint,
-      compute_dataset_key, worker_count);
+  service::easl::cache_utils::DetermineElasticity(job_type, config_, 
+      metadata_store_, compute_dataset_key, worker_count);
 
   VLOG(0) << "EASL - Caching decision for dataset_key " <<
   compute_dataset_key << ": " << job_type;
@@ -724,8 +724,7 @@ Status DataServiceDispatcherImpl::CreateJob(
   std::string dataset_key = service::easl::cache_utils::DatasetKey(
     dataset->dataset_id, dataset->fingerprint, job_type);
   TF_RETURN_IF_ERROR(metadata_store_.CreateJob(job_id, dataset->dataset_id,
-                              dataset->fingerprint, dataset_key));
-
+                              dataset->fingerprint, dataset_key, worker_count));
 
   int64 num_split_providers = 0;
   if (processing_mode == ProcessingMode::DISTRIBUTED_EPOCH) {
@@ -791,9 +790,10 @@ Status DataServiceDispatcherImpl::CreateTasksForJob(
   // Find the next available workers and assign them to this job.
   // By default, start by using a single worker for initial metric collection run. 
   // TODO(easl): Implement policy to decide the number of workers for a job.
-  int num_workers = 0; // 0 -> This will mean we reserve all available workers  
+  std::shared_ptr<easl::JobMetrics> metrics;
+  metadata_store_.GetJobMetrics(job->job_id, metrics);
   std::vector<std::shared_ptr<Worker>> workers = state_.ReserveWorkers(
-    job->job_id, num_workers);
+    job->job_id, metrics->worker_count_);
   tasks.clear();
   tasks.reserve(workers.size());
   for (auto& worker : workers) {

@@ -192,16 +192,24 @@ Status DetermineJobType(const experimental::DispatcherConfig& dispatcher_config,
 
 Status DetermineElasticity(
   const std::string& job_type,
-  const DispatcherState& dispatcher_state,
   const experimental::DispatcherConfig& dispatcher_config,
-  ::tensorflow::data::CacheState& cache_state,
   const ::tensorflow::data::easl::MetadataStore& metadata_store,
-  const uint64 fingerprint,
   const std::string& dataset_key,
-  const int64 job_id,
   int64& worker_count) {
   using NodeMetrics = ::tensorflow::data::easl::NodeMetrics;
   using ModelMetrics = ::tensorflow::data::easl::ModelMetrics;
+
+  // Check if we have any metrics for this dataset
+  std::shared_ptr<data::easl::InputPipelineMetrics> job_metrics;
+  Status s = metadata_store.GetInputPipelineMetricsByDatasetKey(dataset_key, job_metrics);
+
+  // We do not yet have the metrics for this dataset --> use 1 worker
+  if(errors::IsNotFound(s)) {
+    worker_count = 1;
+    return Status::OK();
+  } else if (!s.ok()) {
+    return s;
+  }
 
   // Pipeline stats
   std::shared_ptr<NodeMetrics> last_tf_node_metrics;
@@ -257,21 +265,6 @@ Status DetermineElasticity(
   
   return Status::OK();
 }
-
-// Status DetermineElasticity(
-//   const int64 job_id,
-//   const DispatcherState& dispatcher_state,
-//   const std::string& job_type,
-//   const experimental::DispatcherConfig& dispatcher_config,
-//   const ::tensorflow::data::easl::MetadataStore& metadata_store,
-//   const uint64 fingerprint,
-//   const std::string& dataset_key
-//   ) {
-  
-//   // ReserveWorkers()
-//   // [TODO]: Finish implementation
-//   return Status::OK();
-// }
 
 Status AddPutOperator(const DatasetDef& dataset,
                       const uint64 fingerprint,

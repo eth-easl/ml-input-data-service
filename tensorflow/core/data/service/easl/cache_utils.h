@@ -52,13 +52,9 @@ Status DetermineJobType(
 
 Status DetermineElasticity(
     const std::string& job_type,
-    const DispatcherState& dispatcher_state,
     const experimental::DispatcherConfig& dispatcher_config,
-    ::tensorflow::data::CacheState& cache_state,
     const ::tensorflow::data::easl::MetadataStore& metadata_store,
-    const uint64 fingerprint,
     const std::string& dataset_key,
-    const int64 job_id,
     int64& worker_count);
 
 Status AddPutOperator(const DatasetDef& dataset,
