@@ -211,16 +211,22 @@ Status DetermineElasticity(
     worker_count = 1;
     return Status::OK();
   } else if (!s.ok()) {
+    VLOG(0) << "(DetermineElasticity) Another error has been thrown: " << s;
     return s;
   }
 
   // Pipeline stats: last TF node metrics
+  VLOG(0) << "(DetermineElasticity) Before the GetLastTFNodeMetricsByDatasetKey";
   std::shared_ptr<NodeMetrics> last_tf_node_metrics;
-  TF_RETURN_IF_ERROR(
+  
+  (
     metadata_store.GetLastTFNodeMetricsByDatasetKey(
       dataset_key, last_tf_node_metrics));
+  VLOG(0) << "(DetermineElasticity) After the GetLastTFNodeMetricsByDatasetKey";
   size_t num_workers = (last_tf_node_metrics->metrics_).size();
+  VLOG(0) << "(DetermineElasticity) After the GetLastTFNodeMetricsByDatasetKey size get";
   DCHECK(num_workers > 0);
+  VLOG(0) << "(DetermineElasticity) After the GetLastTFNodeMetricsByDatasetKey size check";
 
   // Model stats
   double client_throughput = 0.0;
@@ -228,6 +234,7 @@ Status DetermineElasticity(
   TF_RETURN_IF_ERROR(
     metadata_store.GetModelMetricsByDatasetKey(
       dataset_key, model_metrics));
+  VLOG(0) << "(DetermineElasticity) After the GetModelMetricsByDatasetKey";
 
   // Get the client throughput 
   for(std::pair<int64, std::shared_ptr<ModelMetrics::Metrics>> e : 

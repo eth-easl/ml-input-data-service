@@ -715,8 +715,8 @@ Status DataServiceDispatcherImpl::CreateJob(
       compute_dataset_key, job_id, job_type);
 
   // Infer the worker count for  this job and job type
-  service::easl::cache_utils::DetermineElasticity(job_type, config_, 
-      metadata_store_, compute_dataset_key, worker_count);
+  TF_RETURN_IF_ERROR(service::easl::cache_utils::DetermineElasticity(job_type, config_, 
+      metadata_store_, compute_dataset_key, worker_count));
 
   VLOG(0) << "EASL - Caching decision for dataset_key " 
           << compute_dataset_key << ": " << job_type;
