@@ -714,11 +714,14 @@ Status DataServiceDispatcherImpl::CreateJob(
       config_, cache_state_, metadata_store_, dataset_fingerprint,
       compute_dataset_key, job_id, job_type);
 
+  // Infer the worker count for  this job and job type
   service::easl::cache_utils::DetermineElasticity(job_type, config_, 
       metadata_store_, compute_dataset_key, worker_count);
 
-  VLOG(0) << "EASL - Caching decision for dataset_key " <<
-  compute_dataset_key << ": " << job_type;
+  VLOG(0) << "EASL - Caching decision for dataset_key " 
+          << compute_dataset_key << ": " << job_type;
+  VLOG(0) << "EASL - Scalability decision for dataset_key "
+          << compute_dataset_key << ": " << worker_count;
 
   // EASL add job entry to metadata store
   std::string dataset_key = service::easl::cache_utils::DatasetKey(
@@ -755,7 +758,8 @@ Status DataServiceDispatcherImpl::CreateJob(
 
 Status DataServiceDispatcherImpl::CreateTasksForWorker(
     const std::string& worker_address) TF_EXCLUSIVE_LOCKS_REQUIRED(mu_) {
-  std::vector<std::shared_ptr<const Job>> jobs = state_.ListJobsForWorker(worker_address);
+  std::vector<std::shared_ptr<const Job>> jobs = state_.ListJobsForWorker(
+    worker_address);
   for (const auto& job : jobs) {
     if (job->finished) {
       continue;

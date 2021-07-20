@@ -260,12 +260,14 @@ void DispatcherState::FinishTask(const FinishTaskUpdate& finish_task) {
       all_finished = false;
     }
   }
-  VLOG(3) << "Job " << task->job->job_id << " finished: " << all_finished;
+  VLOG(0) << "(FinishTask) Job " << task->job->job_id << " finished: " 
+          << all_finished;
   jobs_[task->job->job_id]->finished = all_finished;
   // When a job completes, mark its workers as available
   if (all_finished) {
     for (auto& worker : workers_by_job_[task->job->job_id]) {
-      VLOG(3) << "Releasing worker at address " << worker->address;
+      VLOG(0) << "(FinishTask) Releasing worker at address " << worker->address
+              << " for job " << task->job->job_id;
       avail_workers_[worker->address] = worker;
       jobs_by_worker_[worker->address].erase(task->job->job_id);
     }
@@ -329,27 +331,30 @@ DispatcherState::ListAvailableWorkers() const {
 
 std::vector<std::shared_ptr<DispatcherState::Worker>>
 DispatcherState::ReserveWorkers(
-    int64 job_id, int64 num_workers) {
+    int64 job_id, int64 target_num_workers) {
   // DCHECK(num_workers <= avail_workers_.size()); 
 
   // If the number of required workers is below those available, we just assign
   // as many as there are available at this epoch's scheduling time.
-  num_workers = num_workers <= 0 || num_workers > avail_workers_.size() ? 
-    avail_workers_.size() : num_workers;
+  int64 num_workers = target_num_workers <= 0 
+    || target_num_workers > avail_workers_.size() ? avail_workers_.size() 
+    : target_num_workers;
   std::vector<std::shared_ptr<Worker>> workers;
   workers.reserve(num_workers);
+  VLOG(0) << "(ReserveWorkers) User got " << num_workers << " workers from " 
+          << "target " << target_num_workers << " workers";
   for (auto it = avail_workers_.begin(); it != avail_workers_.end(); ) {
     num_workers--;
     workers.push_back(it->second);
-    VLOG(3) << "Assigning worker at address " << it->second->address
-            << " to job " << job_id;
+    VLOG(0) << "(ReserveWorkers) Assigning worker at address " 
+            << it->second->address << " to job " << job_id;
     workers_by_job_[job_id].push_back(it->second);
     jobs_by_worker_[it->second->address][job_id] = jobs_[job_id];
     avail_workers_.erase(it++);
     if (num_workers == 0)
       break;
   }
-  VLOG(3) << "Number of workers for job " << job_id << " is: "
+  VLOG(0) << "(ReserveWorkers) Number of workers for job " << job_id << " is: "
           << workers_by_job_[job_id].size();
   return workers;
 }
