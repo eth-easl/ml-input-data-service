@@ -787,9 +787,6 @@ Status DataServiceDispatcherImpl::CreateTasksForJob(
     std::shared_ptr<const Job> job,
     std::vector<std::shared_ptr<const Task>>& tasks)
     TF_EXCLUSIVE_LOCKS_REQUIRED(mu_) {
-  // Find the next available workers and assign them to this job.
-  // By default, start by using a single worker for initial metric collection run. 
-  // TODO(easl): Implement policy to decide the number of workers for a job.
   std::shared_ptr<easl::JobMetrics> metrics;
   metadata_store_.GetJobMetrics(job->job_id, metrics);
   std::vector<std::shared_ptr<Worker>> workers = state_.ReserveWorkers(
